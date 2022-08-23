@@ -7,9 +7,6 @@ from math import sqrt, sin, cos, pi
 class Point:
   x: float
   y: float
-  
-  def __dict__(self):
-    return {slot: self.__getattribute__(slot) for slot in self.__slots__}
 
 @dataclass(slots = True)
 class Hex:
@@ -19,9 +16,6 @@ class Hex:
   
   def __post_init__(self):
     assert round(self.q + self.r + self.s) == 0, "q + r + s must be 0"
-  
-  def __dict__(self):
-    return {slot: self.__getattribute__(slot) for slot in self.__slots__}
   
   def __add__(self, other: "Hex"):
     return Hex(self.q + other.q, self.r + other.r, self.s + other.s)
@@ -112,9 +106,6 @@ class Offset:
   col: float
   row: float
   
-  def __dict__(self):
-    return {slot: self.__getattribute__(slot) for slot in self.__slots__}
-  
   EVEN: ClassVar = 1
   ODD: ClassVar = -1
   
@@ -138,9 +129,6 @@ class Offset:
 class DoubledCoord:
   col: float
   row: float
-  
-  def __dict__(self):
-    return {slot: self.__getattribute__(slot) for slot in self.__slots__}
   
   @property
   def qdoubled_to_cube(self):
@@ -167,9 +155,6 @@ class Orientation:
   b2: float
   b3: float
   start_angle: float
-  
-  def __dict__(self):
-    return {slot: self.__getattribute__(slot) for slot in self.__slots__}
 
 @dataclass(slots = True)
 class Layout:
@@ -187,9 +172,6 @@ class Layout:
     sqrt(3.0) / 2.0, sqrt(3.0), 2.0 / 3.0, 0.0, -1.0 / 3.0,
     sqrt(3.0) / 3.0, 0.0
   )
-  
-  def __dict__(self):
-    return {slot: self.__getattribute__(slot) for slot in self.__slots__}
   
   def hex_to_pixel(self, h: Hex):
     M = self.orientation
