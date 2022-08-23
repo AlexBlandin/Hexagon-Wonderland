@@ -347,5 +347,5 @@ from timeit import timeit
 if __name__ == "__main__":
   test_all()
   print("Done.")
-  testing_time = timeit("test_all()", globals = globals())
-  print(f"{testing_time:0.2f}s")
+  testing_time = timeit("test_all()", number = 10**5, globals = globals())
+  print(f"{testing_time:0.2f}s") # pypy is about 14x faster
