@@ -1,105 +1,16 @@
 # Based on http://www.redblobgames.com/grids/hexagons/
 from dataclasses import dataclass
+from functools import cache, partial
+from math import cos, pi, sin, sqrt
 from typing import ClassVar
-from math import sqrt, sin, cos, pi
+
+# Why this needed to wait until 3.11 for being part of typing, I'll never know
+from typing_extensions import Self
 
 @dataclass(slots = True)
 class Point:
   x: float
   y: float
-
-@dataclass(slots = True)
-class Hex:
-  q: float
-  r: float
-  s: float
-  
-  def __post_init__(self):
-    assert round(self.q + self.r + self.s) == 0, "q + r + s must be 0"
-  
-  def __add__(self, other: "Hex"):
-    return Hex(self.q + other.q, self.r + other.r, self.s + other.s)
-  
-  def __sub__(self, other: "Hex"):
-    return Hex(self.q - other.q, self.r - other.r, self.s - other.s)
-  
-  def __mul__(self, scale: float):
-    return Hex(self.q * scale, self.r * scale, self.s * scale)
-  
-  def __truediv__(self, scale: float):
-    return Hex(self.q / scale, self.r / scale, self.s / scale)
-  
-  @property
-  def rotate_left(self):
-    return Hex(-self.s, -self.q, -self.r)
-  
-  @property
-  def rotate_right(self):
-    return Hex(-self.r, -self.s, -self.q)
-  
-  def __lshift__(self, n: int):
-    return self if n == 0 else (self.rotate_left << (n - 1))
-  
-  def __rshift__(self, n: int):
-    return self if n == 0 else (self.rotate_right >> (n - 1))
-  
-  _directions: ClassVar = [(1, 0, -1), (1, -1, 0), (0, -1, 1), (-1, 0, 1), (-1, 1, 0), (0, 1, -1)]
-  _diagonals: ClassVar = [(2, -1, -1), (1, -2, 1), (-1, -1, 2), (-2, 1, 1), (-1, 2, -1), (1, 1, -2)]
-  
-  @staticmethod
-  def direction(direction: int):
-    return Hex(*Hex._directions[direction]) # it's faster to do this than load a global
-  
-  def neighbour(self, direction: int):
-    return self + Hex(*Hex._directions[direction])
-  
-  def diagonal_neighbour(self, diagonal: int):
-    return self + Hex(*Hex._diagonals[diagonal])
-  
-  def __abs__(self):
-    return (abs(self.q) + abs(self.r) + abs(self.s)) // 2
-  
-  def distance(self, other: "Hex"):
-    return abs(self - other)
-  
-  def __round__(self):
-    qi, ri, si = int(round(self.q)), int(round(self.r)), int(round(self.s))
-    qd, rd, sd = abs(qi - self.q), abs(ri - self.r), abs(si - self.s)
-    if qd > rd and qd > sd:
-      qi = -ri - si
-    elif rd > sd:
-      ri = -qi - si
-    else:
-      si = -qi - ri
-    return Hex(qi, ri, si)
-  
-  def lerp(self, other: "Hex", t: float):
-    return Hex(self.q * (1.0 - t) + other.q * t, self.r * (1.0 - t) + other.r * t, self.s * (1.0 - t) + other.s * t)
-  
-  def linedraw(self, other: "Hex"):
-    N = self.distance(other)
-    a_nudge = Hex(self.q + 1e-06, self.r + 1e-06, self.s - 2e-06)
-    b_nudge = Hex(other.q + 1e-06, other.r + 1e-06, other.s - 2e-06)
-    step = 1.0 / max(N, 1)
-    return [round(a_nudge.lerp(b_nudge, step * i)) for i in range(N + 1)]
-  
-  def qoffset_from_cube(self, offset):
-    if offset != Offset.EVEN and offset != Offset.ODD:
-      raise ValueError("offset must be EVEN (+1) or ODD (-1)")
-    return Offset(self.q, self.r + (self.q + offset * (self.q & 1)) // 2)
-  
-  def roffset_from_cube(self, offset):
-    if offset != Offset.EVEN and offset != Offset.ODD:
-      raise ValueError("offset must be EVEN (+1) or ODD (-1)")
-    return Offset(self.q + (self.r + offset * (self.r & 1)) // 2, self.r)
-  
-  @property
-  def qdoubled_from_cube(self):
-    return DoubledCoord(self.q, 2 * self.r + self.q)
-  
-  @property
-  def rdoubled_from_cube(self):
-    return DoubledCoord(2 * self.q + self.r, self.r)
 
 @dataclass(slots = True)
 class Offset:
@@ -124,6 +35,117 @@ class Offset:
     if offset != Offset.EVEN and offset != Offset.ODD:
       raise ValueError("offset must be EVEN (+1) or ODD (-1)")
     return Hex(q, r, s)
+
+@dataclass(slots = True)
+class Hex:
+  q: float
+  r: float
+  s: float
+  
+  def __post_init__(self):
+    assert round(self.q + self.r + self.s) == 0, "q + r + s must equal 0"
+  
+  def __add__(self, other: Self):
+    return Hex(self.q + other.q, self.r + other.r, self.s + other.s)
+  
+  def __sub__(self, other: Self):
+    return Hex(self.q - other.q, self.r - other.r, self.s - other.s)
+  
+  def __mul__(self, scale: float):
+    return Hex(self.q * scale, self.r * scale, self.s * scale)
+  
+  def __truediv__(self, scale: float):
+    return Hex(self.q / scale, self.r / scale, self.s / scale)
+  
+  @property
+  def rotate_left(self):
+    return Hex(-self.s, -self.q, -self.r)
+  
+  @property
+  def rotate_right(self):
+    return Hex(-self.r, -self.s, -self.q)
+  
+  def __lshift__(self, n: int):
+    return self if n <= 0 else (self.rotate_left << (n - 1))
+  
+  def __rshift__(self, n: int):
+    return self if n <= 0 else (self.rotate_right >> (n - 1))
+  
+  @staticmethod
+  @cache
+  def DIRECTIONS():
+    return (Hex(1, 0, -1), Hex(1, -1, 0), Hex(0, -1, 1), Hex(-1, 0, 1), Hex(-1, 1, 0), Hex(0, 1, -1))
+  
+  @staticmethod
+  @cache
+  def DIAGONALS():
+    return (Hex(2, -1, -1), Hex(1, -2, 1), Hex(-1, -1, 2), Hex(-2, 1, 1), Hex(-1, 2, -1), Hex(1, 1, -2))
+  
+  @staticmethod
+  @cache
+  def direction(direction: int):
+    return Hex.DIRECTIONS()[direction]
+  
+  def neighbour(self, direction: int):
+    return self + Hex.DIRECTIONS()[direction]
+  
+  @property
+  def neighbours(self):
+    d = Hex.DIRECTIONS()
+    return (self + d[0], self + d[1], self + d[2], self + d[3], self + d[4], self + d[5])
+  
+  def diagonal_neighbour(self, diagonal: int):
+    return self + Hex.DIAGONALS()[diagonal]
+  
+  @property
+  def diagonal_neighbours(self):
+    d = Hex.DIAGONALS()
+    return (self + d[0], self + d[1], self + d[2], self + d[3], self + d[4], self + d[5])
+  
+  def __abs__(self):
+    return (abs(self.q) + abs(self.r) + abs(self.s)) // 2
+  
+  def distance(self, other: "Hex"):
+    return abs(self - other)
+  
+  def __round__(self):
+    qi, ri, si = int(round(self.q)), int(round(self.r)), int(round(self.s))
+    qd, rd, sd = abs(qi - self.q), abs(ri - self.r), abs(si - self.s)
+    if qd > rd and qd > sd:
+      qi = -ri - si
+    elif rd > sd:
+      ri = -qi - si
+    else:
+      si = -qi - ri
+    return Hex(qi, ri, si)
+  
+  def lerp(self, other: Self, t: float):
+    return Hex(self.q * (1.0 - t) + other.q * t, self.r * (1.0 - t) + other.r * t, self.s * (1.0 - t) + other.s * t)
+  
+  def linedraw(self, other: Self):
+    N = self.distance(other)
+    a_nudge = Hex(self.q + 1e-06, self.r + 1e-06, self.s - 2e-06)
+    b_nudge = Hex(other.q + 1e-06, other.r + 1e-06, other.s - 2e-06)
+    step = 1.0 / max(N, 1)
+    return [round(a_nudge.lerp(b_nudge, step * i)) for i in range(N + 1)]
+  
+  def qoffset_from_cube(self, offset: Offset):
+    if offset != Offset.EVEN and offset != Offset.ODD:
+      raise ValueError("offset must be EVEN (+1) or ODD (-1)")
+    return Offset(self.q, self.r + (self.q + offset * (self.q & 1)) // 2)
+  
+  def roffset_from_cube(self, offset: Offset):
+    if offset != Offset.EVEN and offset != Offset.ODD:
+      raise ValueError("offset must be EVEN (+1) or ODD (-1)")
+    return Offset(self.q + (self.r + offset * (self.r & 1)) // 2, self.r)
+  
+  @property
+  def qdoubled_from_cube(self):
+    return DoubledCoord(self.q, 2 * self.r + self.q)
+  
+  @property
+  def rdoubled_from_cube(self):
+    return DoubledCoord(2 * self.q + self.r, self.r)
 
 @dataclass(slots = True)
 class DoubledCoord:
@@ -344,8 +366,11 @@ def test_all():
 
 from timeit import timeit
 
+time = partial(timeit, globals = globals())
+
 if __name__ == "__main__":
   test_all()
   print("Done.")
-  testing_time = timeit("test_all()", number = 10**5, globals = globals())
-  print(f"{testing_time:0.2f}s") # pypy is about 14x faster
+  testing_time = time("test_all()", number = 10**4)
+  print(f"{testing_time:.2f}s") # pypy is about 14x faster
+  print(f"{time('Hex.direction(0)'):.2f}")
