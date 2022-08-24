@@ -196,30 +196,25 @@ class Layout:
   )
   
   def hex_to_pixel(self, h: Hex):
-    M = self.orientation
-    size = self.size
-    origin = self.origin
-    x = (M.f0 * h.q + M.f1 * h.r) * size.x
-    y = (M.f2 * h.q + M.f3 * h.r) * size.y
-    return Point(x + origin.x, y + origin.y)
+    o, size, origin = self.orientation, self.size, self.origin
+    x = (o.f0 * h.q + o.f1 * h.r) * size.x + origin.x
+    y = (o.f2 * h.q + o.f3 * h.r) * size.y + origin.y
+    return Point(x, y)
   
   def pixel_to_hex(self, p: Point):
-    M = self.orientation
-    size = self.size
-    origin = self.origin
+    o, size, origin = self.orientation, self.size, self.origin
     pt = Point((p.x - origin.x) / size.x, (p.y - origin.y) / size.y)
-    q = M.b0 * pt.x + M.b1 * pt.y
-    r = M.b2 * pt.x + M.b3 * pt.y
+    q = o.b0 * pt.x + o.b1 * pt.y
+    r = o.b2 * pt.x + o.b3 * pt.y
     return Hex(q, r, -q - r)
   
   def hex_corner_offset(self, corner: int):
-    M = self.orientation
-    size = self.size
-    angle = 2.0 * pi * (M.start_angle - corner) * 0.16666666666666666
+    o, size = self.orientation, self.size
+    angle = (o.start_angle - corner) * pi * 0.3333333333333333
     return Point(size.x * cos(angle), size.y * sin(angle))
   
   def polygon_corners(self, h: Hex):
-    corners = []
+    corners: list[Point] = []
     center = self.hex_to_pixel(h)
     for i in range(6):
       offset = self.hex_corner_offset(i)
@@ -373,4 +368,3 @@ if __name__ == "__main__":
   print("Done.")
   testing_time = time("test_all()", number = 10**4)
   print(f"{testing_time:.2f}s") # pypy is about 14x faster
-  print(f"{time('Hex.direction(0)'):.2f}")
