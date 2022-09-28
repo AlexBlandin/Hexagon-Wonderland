@@ -1,4 +1,3 @@
-# Based on http://www.redblobgames.com/grids/hexagons/
 from dataclasses import dataclass
 from functools import cache, partial
 from math import cos, pi, sin, sqrt
