@@ -1,6 +1,6 @@
-# hexagon-wonderland
+# Hexagon Wonderland
 
-> Welcome to the Hexagon Wonderland
+> Welcome to the Hexagon Wonderland!
 
 [Based on this!](http://www.redblobgames.com/grids/hexagons/)
 
