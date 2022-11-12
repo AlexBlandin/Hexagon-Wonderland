@@ -1,10 +1,12 @@
+import sys
 from dataclasses import dataclass
 from functools import cache, partial
 from math import cos, pi, sin, sqrt
 from typing import ClassVar
 
 # Why this needed to wait until 3.11 for being part of typing, I'll never know
-from typing_extensions import Self
+if sys.version_info[0] == 3 and sys.version_info[1] < 11:
+  from typing_extensions import Self
 
 @dataclass(slots = True)
 class Point:
