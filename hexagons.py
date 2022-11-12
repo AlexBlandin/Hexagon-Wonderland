@@ -18,7 +18,7 @@ class Point:
 
 @dataclass(slots = True, frozen = True)
 class Offset:
-  """Which type of offset system is used, baked in for uniformity"""
+  """Coordinates in Offset (col,row) space, the type of offset system is baked in for uniformity"""
   col: float
   row: float
   
@@ -43,7 +43,7 @@ class Offset:
 
 @dataclass(slots = True, frozen = True)
 class DoubledCoord:
-  """Coordinates in the (col,row) grid space"""
+  """Coordinates in a Doubled (col,row) grid space"""
   col: float
   row: float
   
