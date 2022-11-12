@@ -7,14 +7,18 @@ from typing import ClassVar
 # Why this needed to wait until 3.11 for being part of typing, I'll never know
 if sys.version_info[0] == 3 and sys.version_info[1] < 11:
   from typing_extensions import Self
+else:
+  from typing import Self
 
-@dataclass(slots = True)
+@dataclass(slots = True, frozen = True)
 class Point:
+  """A point in Cartesian (x,y) space"""
   x: float
   y: float
 
-@dataclass(slots = True)
+@dataclass(slots = True, frozen = True)
 class Offset:
+  """Which type of offset system is used, baked in for uniformity"""
   col: float
   row: float
   
@@ -37,11 +41,33 @@ class Offset:
       raise ValueError("offset must be EVEN (+1) or ODD (-1)")
     return Hex(q, r, s)
 
-@dataclass(slots = True)
+@dataclass(slots = True, frozen = True)
+class DoubledCoord:
+  """Coordinates in the (col,row) grid space"""
+  col: float
+  row: float
+  
+  @property
+  def qdoubled_to_cube(self):
+    q = self.col
+    r = (self.row - self.col) // 2
+    s = -q - r
+    return Hex(q, r, s)
+  
+  @property
+  def rdoubled_to_cube(self):
+    q = (self.col - self.row) // 2
+    r = self.row
+    s = -q - r
+    return Hex(q, r, s)
+
+@dataclass(slots = True, frozen = True)
 class Hex:
+  """A Hexagon, defined as a cube analogue in the space (q,r,s) where q + r + s == 0"""
   q: float
   r: float
   s: float
+  blocked: bool = False
   
   def __post_init__(self):
     assert round(self.q + self.r + self.s) == 0, "q + r + s must equal 0"
@@ -106,7 +132,7 @@ class Hex:
   def __abs__(self):
     return (abs(self.q) + abs(self.r) + abs(self.s)) // 2
   
-  def distance(self, other: "Hex"):
+  def distance(self, other: Self):
     return abs(self - other)
   
   def __round__(self):
@@ -130,6 +156,58 @@ class Hex:
     step = 1.0 / max(N, 1)
     return [round(a_nudge.lerp(b_nudge, step * i)) for i in range(N + 1)]
   
+  @property
+  def reflectQ(self):
+    return Hex(self.q, self.s, self.r)
+  
+  @property
+  def reflectR(self):
+    return Hex(self.s, self.r, self.q)
+  
+  @property
+  def reflectS(self):
+    return Hex(self.r, self.q, self.s)
+  
+  def range(self, N: int):
+    """Given a range N, which hexes are within N steps from here?"""
+    return [self + Hex(q, r, -q - r) for q in range(-N, N + 1) for r in range(max(-N, -q - N), min(+N, -q + N) + 1)]
+  
+  def reachable(self, movement: int):
+    """Given a number of steps that can be made, which hexes are reachable?"""
+    visited: set[Hex] = {self} # set of hexes
+    fringes: list[list[Hex]] = [] # array of arrays of hexes
+    fringes.append([self])
+    
+    for k in range(2, movement + 1):
+      fringes.append([])
+      for hex in fringes[k - 1]:
+        for dir in range(6):
+          neighbour = hex.neighbour(dir)
+          if neighbour not in visited and not neighbour.blocked:
+            visited.add(neighbour)
+            fringes[k].append(neighbour)
+    
+    return visited
+  
+  def scale(self, factor: int):
+    return Hex(self.q * factor, self.r * factor, self.s * factor)
+  
+  def ring(self, radius: int):
+    results: list[Hex] = []
+    # this code doesn't work for radius == 0; can you see why?
+    hex: Hex = self.scale(self.direction(4), radius)
+    for i in range(6):
+      for _ in range(radius):
+        results.append(hex)
+        hex = hex.neighbour(i)
+    return results
+  
+  def spiral(self, radius: int):
+    results: list[Hex] = [self]
+    for k in range(radius + 1):
+      results += self.ring(k)
+    return results
+  
   def qoffset_from_cube(self, offset: Offset):
     if offset != Offset.EVEN and offset != Offset.ODD:
       raise ValueError("offset must be EVEN (+1) or ODD (-1)")
@@ -148,27 +226,9 @@ class Hex:
   def rdoubled_from_cube(self):
     return DoubledCoord(2 * self.q + self.r, self.r)
 
-@dataclass(slots = True)
-class DoubledCoord:
-  col: float
-  row: float
-  
-  @property
-  def qdoubled_to_cube(self):
-    q = self.col
-    r = (self.row - self.col) // 2
-    s = -q - r
-    return Hex(q, r, s)
-  
-  @property
-  def rdoubled_to_cube(self):
-    q = (self.col - self.row) // 2
-    r = self.row
-    s = -q - r
-    return Hex(q, r, s)
-
-@dataclass(slots = True)
+@dataclass(slots = True, frozen = True)
 class Orientation:
+  """A helper POD for Layout"""
   f0: float
   f1: float
   f2: float
@@ -179,8 +239,9 @@ class Orientation:
   b3: float
   start_angle: float
 
-@dataclass(slots = True)
+@dataclass(slots = True, frozen = True)
 class Layout:
+  """Do you want the hexagons to have pointy tops or flat tops?"""
   orientation: Orientation
   size: Point
   origin: Point
@@ -302,9 +363,9 @@ def test_hex_linedraw():
 def test_layout():
   h = Hex(3, 4, -7)
   flat = Layout(Layout.FLAT, Point(10.0, 15.0), Point(35.0, 71.0))
-  equal_hex("layout", h, round(flat.pixel_to_hex(flat.hex_to_pixel(h))))
+  equal_hex("layout flat", h, round(flat.pixel_to_hex(flat.hex_to_pixel(h))))
   pointy = Layout(Layout.POINTY, Point(10.0, 15.0), Point(35.0, 71.0))
-  equal_hex("layout", h, round(pointy.pixel_to_hex(pointy.hex_to_pixel(h))))
+  equal_hex("layout pointy", h, round(pointy.pixel_to_hex(pointy.hex_to_pixel(h))))
 
 def test_offset_roundtrip():
   a = Hex(3, 4, -7)
@@ -366,6 +427,6 @@ time = partial(timeit, globals = globals())
 
 if __name__ == "__main__":
   test_all()
-  print("Done.")
+  print("All tests complete.")
   testing_time = time("test_all()", number = 10**4)
   print(f"{testing_time:.2f}s") # pypy is about 14x faster
