@@ -1,8 +1,7 @@
 import sys
-from dataclasses import dataclass
 from functools import cache, partial
 from math import cos, pi, sin, sqrt
-from typing import ClassVar
+from typing import ClassVar, NamedTuple
 
 # Why this needed to wait until 3.11 for being part of typing, I'll never know
 if sys.version_info[0] == 3 and sys.version_info[1] < 11:
@@ -10,42 +9,18 @@ if sys.version_info[0] == 3 and sys.version_info[1] < 11:
 else:
   from typing import Self
 
-@dataclass(slots = True, frozen = True)
-class Point:
-  """A point in Cartesian (x,y) space"""
+class Point(NamedTuple):
+  """A point in a Cartesian (x,y) space"""
   x: float
   y: float
 
-@dataclass(slots = True, frozen = True)
-class Offset:
-  """Coordinates in Offset (col,row) space, the type of offset system is baked in for uniformity"""
+class ColRow(NamedTuple):
+  """A point in a (col,row) space"""
   col: float
   row: float
-  
-  EVEN: ClassVar = 1
-  ODD: ClassVar = -1
-  
-  def qoffset_to_cube(self, offset):
-    q = self.col
-    r = self.row - (self.col + offset * (self.col & 1)) // 2
-    s = -q - r
-    if offset != Offset.EVEN and offset != Offset.ODD:
-      raise ValueError("offset must be EVEN (+1) or ODD (-1)")
-    return Hex(q, r, s)
-  
-  def roffset_to_cube(self, offset):
-    q = self.col - (self.row + offset * (self.row & 1)) // 2
-    r = self.row
-    s = -q - r
-    if offset != Offset.EVEN and offset != Offset.ODD:
-      raise ValueError("offset must be EVEN (+1) or ODD (-1)")
-    return Hex(q, r, s)
 
-@dataclass(slots = True, frozen = True)
-class DoubledCoord:
+class DoubledCoord(ColRow):
   """Coordinates in a Doubled (col,row) grid space"""
-  col: float
-  row: float
   
   @property
   def qdoubled_to_cube(self):
@@ -61,8 +36,29 @@ class DoubledCoord:
     s = -q - r
     return Hex(q, r, s)
 
-@dataclass(slots = True, frozen = True)
-class Hex:
+class Offset(ColRow):
+  """Coordinates in Offset (col,row) space, the type of offset system is baked in for uniformity"""
+  
+  EVEN: ClassVar = 1
+  ODD: ClassVar = -1
+  
+  def qoffset_to_cube(self, offset):
+    q = self.col
+    r = self.row - (self.col + offset * (self.col % 2)) // 2
+    s = -q - r
+    if offset != Offset.EVEN and offset != Offset.ODD:
+      raise ValueError("offset must be EVEN (+1) or ODD (-1)")
+    return Hex(q, r, s)
+  
+  def roffset_to_cube(self, offset):
+    q = self.col - (self.row + offset * (self.row % 2)) // 2
+    r = self.row
+    s = -q - r
+    if offset != Offset.EVEN and offset != Offset.ODD:
+      raise ValueError("offset must be EVEN (+1) or ODD (-1)")
+    return Hex(q, r, s)
+
+class Hex(NamedTuple):
   """A Hexagon, defined as a cube analogue in the space (q,r,s) where q + r + s == 0"""
   q: float
   r: float
@@ -149,12 +145,12 @@ class Hex:
   def lerp(self, other: Self, t: float):
     return Hex(self.q * (1.0 - t) + other.q * t, self.r * (1.0 - t) + other.r * t, self.s * (1.0 - t) + other.s * t)
   
-  def linedraw(self, other: Self):
-    N = self.distance(other)
+  def linedraw(self, other: Self) -> list[Self]:
+    N = round(self.distance(other))
     a_nudge = Hex(self.q + 1e-06, self.r + 1e-06, self.s - 2e-06)
     b_nudge = Hex(other.q + 1e-06, other.r + 1e-06, other.s - 2e-06)
     step = 1.0 / max(N, 1)
-    return [round(a_nudge.lerp(b_nudge, step * i)) for i in range(N + 1)]
+    return [round(a_nudge.lerp(b_nudge, step * i)) for i in range(N + 1)] # type: ignore
   
   @property
   def reflectQ(self):
@@ -189,13 +185,10 @@ class Hex:
     
     return visited
   
-  def scale(self, factor: int):
-    return Hex(self.q * factor, self.r * factor, self.s * factor)
-  
   def ring(self, radius: int):
     results: list[Hex] = []
     # this code doesn't work for radius == 0; can you see why?
-    hex: Hex = self.scale(self.direction(4), radius)
+    hex: Hex = self + self.direction(4) * radius
     for i in range(6):
       for _ in range(radius):
         results.append(hex)
@@ -208,15 +201,15 @@ class Hex:
       results += self.ring(k)
     return results
   
-  def qoffset_from_cube(self, offset: Offset):
+  def qoffset_from_cube(self, offset: int):
     if offset != Offset.EVEN and offset != Offset.ODD:
       raise ValueError("offset must be EVEN (+1) or ODD (-1)")
-    return Offset(self.q, self.r + (self.q + offset * (self.q & 1)) // 2)
+    return Offset(self.q, self.r + (self.q + offset * (self.q % 2)) // 2)
   
-  def roffset_from_cube(self, offset: Offset):
+  def roffset_from_cube(self, offset: int):
     if offset != Offset.EVEN and offset != Offset.ODD:
       raise ValueError("offset must be EVEN (+1) or ODD (-1)")
-    return Offset(self.q + (self.r + offset * (self.r & 1)) // 2, self.r)
+    return Offset(self.q + self.r + offset * (self.r % 2) // 2, self.r)
   
   @property
   def qdoubled_from_cube(self):
@@ -226,8 +219,7 @@ class Hex:
   def rdoubled_from_cube(self):
     return DoubledCoord(2 * self.q + self.r, self.r)
 
-@dataclass(slots = True, frozen = True)
-class Orientation:
+class Orientation(NamedTuple):
   """A helper POD for Layout"""
   f0: float
   f1: float
@@ -239,8 +231,7 @@ class Orientation:
   b3: float
   start_angle: float
 
-@dataclass(slots = True, frozen = True)
-class Layout:
+class Layout(NamedTuple):
   """Do you want the hexagons to have pointy tops or flat tops?"""
   orientation: Orientation
   size: Point
@@ -291,20 +282,16 @@ def equal_hex(name: str, a: Hex, b: Hex):
   if not (a.q == b.q and a.s == b.s and a.r == b.r):
     complain(name, a, b)
 
-def equal_offsetcoord(name: str, a: Offset, b: Offset):
+def equal_rowcol(name: str, a: ColRow, b: ColRow):
   if not (a.col == b.col and a.row == b.row):
     complain(name, a, b)
 
-def equal_doubledcoord(name: str, a: Offset, b: Offset):
-  if not (a.col == b.col and a.row == b.row):
-    complain(name, a, b)
-
-def equal_int(name: str, a: int, b: int):
+def equal_any(name: str, a, b):
   if not (a == b):
     complain(name, a, b)
 
 def equal_hex_array(name: str, a: list[Hex], b: list[Hex]):
-  equal_int(name, len(a), len(b))
+  equal_any(name, len(a), len(b))
   for i in range(0, len(a)):
     equal_hex(name, a[i], b[i])
 
@@ -323,7 +310,7 @@ def test_hex_diagonal():
   equal_hex("hex_diagonal", Hex(-1, -1, 2), Hex(1, -2, 1).diagonal_neighbour(3))
 
 def test_hex_distance():
-  equal_int("hex_distance", 7, Hex(3, -7, 4).distance(Hex(0, 0, 0)))
+  equal_any("hex_distance", 7, Hex(3, -7, 4).distance(Hex(0, 0, 0)))
 
 def test_hex_rotate_right():
   equal_hex("hex_rotate_right", Hex(1, -3, 2).rotate_right, Hex(3, -2, -1))
@@ -339,16 +326,20 @@ def test_hex_round():
   a = Hex(0.0, 0.0, 0.0)
   b = Hex(1.0, -1.0, 0.0)
   c = Hex(0.0, -1.0, 1.0)
-  equal_hex("hex_round 1", Hex(5, -10, 5), round(Hex(0.0, 0.0, 0.0).lerp(Hex(10.0, -20.0, 10.0), 0.5)))
-  equal_hex("hex_round 2", round(a), round(a.lerp(b, 0.499)))
-  equal_hex("hex_round 3", round(b), round(a.lerp(b, 0.501)))
+  equal_hex("hex_round 1", Hex(5, -10, 5), round(Hex(0.0, 0.0, 0.0).lerp(Hex(10.0, -20.0, 10.0), 0.5))) # type: ignore
+  equal_hex("hex_round 2", round(a), round(a.lerp(b, 0.499))) # type: ignore
+  equal_hex("hex_round 3", round(b), round(a.lerp(b, 0.501))) # type: ignore
   equal_hex(
-    "hex_round 4", round(a),
-    round(Hex(a.q * 0.4 + b.q * 0.3 + c.q * 0.3, a.r * 0.4 + b.r * 0.3 + c.r * 0.3, a.s * 0.4 + b.s * 0.3 + c.s * 0.3))
+    "hex_round 4",
+    round(a), # type: ignore
+    round(Hex(a.q * 0.4 + b.q * 0.3 + c.q * 0.3, a.r * 0.4 + b.r * 0.3 + c.r * 0.3,
+              a.s * 0.4 + b.s * 0.3 + c.s * 0.3)) # type: ignore
   )
   equal_hex(
-    "hex_round 5", round(c),
-    round(Hex(a.q * 0.3 + b.q * 0.3 + c.q * 0.4, a.r * 0.3 + b.r * 0.3 + c.r * 0.4, a.s * 0.3 + b.s * 0.3 + c.s * 0.4))
+    "hex_round 5",
+    round(c), # type: ignore
+    round(Hex(a.q * 0.3 + b.q * 0.3 + c.q * 0.4, a.r * 0.3 + b.r * 0.3 + c.r * 0.4,
+              a.s * 0.3 + b.s * 0.3 + c.s * 0.4)) # type: ignore
   )
 
 def test_hex_linedraw():
@@ -363,25 +354,25 @@ def test_hex_linedraw():
 def test_layout():
   h = Hex(3, 4, -7)
   flat = Layout(Layout.FLAT, Point(10.0, 15.0), Point(35.0, 71.0))
-  equal_hex("layout flat", h, round(flat.pixel_to_hex(flat.hex_to_pixel(h))))
+  equal_hex("layout flat", h, round(flat.pixel_to_hex(flat.hex_to_pixel(h)))) # type: ignore
   pointy = Layout(Layout.POINTY, Point(10.0, 15.0), Point(35.0, 71.0))
-  equal_hex("layout pointy", h, round(pointy.pixel_to_hex(pointy.hex_to_pixel(h))))
+  equal_hex("layout pointy", h, round(pointy.pixel_to_hex(pointy.hex_to_pixel(h)))) # type: ignore
 
 def test_offset_roundtrip():
   a = Hex(3, 4, -7)
   b = Offset(1, -3)
   equal_hex("conversion_roundtrip even-q", a, a.qoffset_from_cube(Offset.EVEN).qoffset_to_cube(Offset.EVEN))
-  equal_offsetcoord("conversion_roundtrip even-q", b, b.qoffset_to_cube(Offset.EVEN).qoffset_from_cube(Offset.EVEN))
+  equal_rowcol("conversion_roundtrip even-q", b, b.qoffset_to_cube(Offset.EVEN).qoffset_from_cube(Offset.EVEN))
   equal_hex("conversion_roundtrip odd-q", a, a.qoffset_from_cube(Offset.ODD).qoffset_to_cube(Offset.ODD))
-  equal_offsetcoord("conversion_roundtrip odd-q", b, b.qoffset_to_cube(Offset.ODD).qoffset_from_cube(Offset.ODD))
+  equal_rowcol("conversion_roundtrip odd-q", b, b.qoffset_to_cube(Offset.ODD).qoffset_from_cube(Offset.ODD))
   equal_hex("conversion_roundtrip even-r", a, a.roffset_from_cube(Offset.EVEN).roffset_to_cube(Offset.EVEN))
-  equal_offsetcoord("conversion_roundtrip even-r", b, b.roffset_to_cube(Offset.EVEN).roffset_from_cube(Offset.EVEN))
+  equal_rowcol("conversion_roundtrip even-r", b, b.roffset_to_cube(Offset.EVEN).roffset_from_cube(Offset.EVEN))
   equal_hex("conversion_roundtrip odd-r", a, a.roffset_from_cube(Offset.ODD).roffset_to_cube(Offset.ODD))
-  equal_offsetcoord("conversion_roundtrip odd-r", b, b.roffset_to_cube(Offset.ODD).roffset_from_cube(Offset.ODD))
+  equal_rowcol("conversion_roundtrip odd-r", b, b.roffset_to_cube(Offset.ODD).roffset_from_cube(Offset.ODD))
 
 def test_offset_from_cube():
-  equal_offsetcoord("offset_from_cube even-q", Offset(1, 3), Hex(1, 2, -3).qoffset_from_cube(Offset.EVEN))
-  equal_offsetcoord("offset_from_cube odd-q", Offset(1, 2), Hex(1, 2, -3).qoffset_from_cube(Offset.ODD))
+  equal_rowcol("offset_from_cube even-q", Offset(1, 3), Hex(1, 2, -3).qoffset_from_cube(Offset.EVEN))
+  equal_rowcol("offset_from_cube odd-q", Offset(1, 2), Hex(1, 2, -3).qoffset_from_cube(Offset.ODD))
 
 def test_offset_to_cube():
   equal_hex("offset_to_cube even-", Hex(1, 2, -3), Offset(1, 3).qoffset_to_cube(Offset.EVEN))
@@ -391,13 +382,13 @@ def test_doubled_roundtrip():
   a = Hex(3, 4, -7)
   b = DoubledCoord(1, -3)
   equal_hex("conversion_roundtrip doubled-q", a, a.qdoubled_from_cube.qdoubled_to_cube)
-  equal_doubledcoord("conversion_roundtrip doubled-q", b, b.qdoubled_to_cube.qdoubled_from_cube)
+  equal_rowcol("conversion_roundtrip doubled-q", b, b.qdoubled_to_cube.qdoubled_from_cube)
   equal_hex("conversion_roundtrip doubled-r", a, a.rdoubled_from_cube.rdoubled_to_cube)
-  equal_doubledcoord("conversion_roundtrip doubled-r", b, b.rdoubled_to_cube.rdoubled_from_cube)
+  equal_rowcol("conversion_roundtrip doubled-r", b, b.rdoubled_to_cube.rdoubled_from_cube)
 
 def test_doubled_from_cube():
-  equal_doubledcoord("doubled_from_cube doubled-q", DoubledCoord(1, 5), Hex(1, 2, -3).qdoubled_from_cube)
-  equal_doubledcoord("doubled_from_cube doubled-r", DoubledCoord(4, 2), Hex(1, 2, -3).rdoubled_from_cube)
+  equal_rowcol("doubled_from_cube doubled-q", DoubledCoord(1, 5), Hex(1, 2, -3).qdoubled_from_cube)
+  equal_rowcol("doubled_from_cube doubled-r", DoubledCoord(4, 2), Hex(1, 2, -3).rdoubled_from_cube)
 
 def test_doubled_to_cube():
   equal_hex("doubled_to_cube doubled-q", Hex(1, 2, -3), DoubledCoord(1, 5).qdoubled_to_cube)
