@@ -1,7 +1,7 @@
-import sys
-from functools import cache, partial
-from math import cos, pi, sin, sqrt
+from functools import partial, cache
 from typing import NamedTuple, Union
+from math import sqrt, sin, cos, pi
+import sys
 
 # Why this needed to wait until 3.11 for being part of typing, I'll never know
 if sys.version_info[0] == 3 and sys.version_info[1] < 11:
@@ -21,7 +21,6 @@ class ColRow(NamedTuple):
 
 class DoubledCoord(ColRow):
   """Coordinates in a Doubled (col,row) grid space"""
-  
   @property
   def qdoubled_to_cube(self):
     q = self.col
@@ -38,13 +37,15 @@ class DoubledCoord(ColRow):
 
 class Offset(ColRow):
   """Coordinates in Offset (col,row) space, the type of offset system is baked in for uniformity"""
+  @classmethod
+  @property
+  def EVEN(cls):
+    return 1
   
   @classmethod
   @property
-  def EVEN(cls): return 1
-  @classmethod
-  @property
-  def ODD(cls): return -1
+  def ODD(cls):
+    return -1
   
   def qoffset_to_cube(self, offset: int):
     if offset != Offset.EVEN and offset != Offset.ODD:
@@ -206,13 +207,13 @@ class Hex(NamedTuple):
   def qoffset_from_cube(self, offset: int):
     if offset != Offset.EVEN and offset != Offset.ODD:
       raise ValueError("offset must be EVEN (+1) or ODD (-1)")
-    hex: Hex = round(self)  # type: ignore
+    hex: Hex = round(self) # type: ignore
     return Offset(int(hex.q), int(hex.r) + (int(hex.q) + offset * (int(hex.q) & 1)) // 2)
   
   def roffset_from_cube(self, offset: int):
     if offset != Offset.EVEN and offset != Offset.ODD:
       raise ValueError("offset must be EVEN (+1) or ODD (-1)")
-    hex: Hex = round(self)  # type: ignore
+    hex: Hex = round(self) # type: ignore
     return Offset(int(hex.q) + (int(hex.r) + offset * (int(hex.r) & 1)) // 2, int(hex.r))
   
   @property
@@ -245,18 +246,13 @@ class Layout(NamedTuple):
   
   @classmethod
   @property
-  def POINTY(cls): return Orientation(
-    sqrt(3.0),
-    sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0,
-    sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5
-  )
+  def POINTY(cls):
+    return Orientation(sqrt(3.0), sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5)
+  
   @classmethod
   @property
-  def FLAT(cls): return Orientation(
-    3.0 / 2.0, 0.0,
-    sqrt(3.0) / 2.0, sqrt(3.0), 2.0 / 3.0, 0.0, -1.0 / 3.0,
-    sqrt(3.0) / 3.0, 0.0
-  )
+  def FLAT(cls):
+    return Orientation(3.0 / 2.0, 0.0, sqrt(3.0) / 2.0, sqrt(3.0), 2.0 / 3.0, 0.0, -1.0 / 3.0, sqrt(3.0) / 3.0, 0.0)
   
   def hex_to_pixel(self, h: Hex):
     o, size, origin = self.orientation, self.size, self.origin
@@ -430,4 +426,4 @@ if __name__ == "__main__":
   test_all()
   print("All tests complete.")
   testing_time = time("test_all()", number = 10**4)
-  print(f"{testing_time:.2f}s") # pypy is about 14x faster
+  print(f"{testing_time:.2f}s")
