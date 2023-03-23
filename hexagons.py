@@ -1,4 +1,4 @@
-from functools import partial, cache
+from functools import cache
 from typing import NamedTuple, Union
 from math import sqrt, sin, cos, pi
 import sys
@@ -418,12 +418,10 @@ def test_all():
   test_doubled_from_cube()
   test_doubled_to_cube()
 
-from timeit import timeit
-
-time = partial(timeit, globals = globals())
-
 if __name__ == "__main__":
+  from timeit import timeit
+  
   test_all()
   print("All tests complete.")
-  testing_time = time("test_all()", number = 10**4)
+  testing_time = timit("test_all()", number = 10**4, globals = globals())
   print(f"{testing_time:.2f}s")
