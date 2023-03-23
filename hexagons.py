@@ -423,5 +423,5 @@ if __name__ == "__main__":
   
   test_all()
   print("All tests complete.")
-  testing_time = timit("test_all()", number = 10**4, globals = globals())
+  testing_time = timeit("test_all()", number = 10**4, globals = globals())
   print(f"{testing_time:.2f}s")
