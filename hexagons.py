@@ -92,20 +92,20 @@ class Hex(NamedTuple):
     return Hex(-self.r, -self.s, -self.q)
   
   def __lshift__(self, n: int):
-    return self if n <= 0 else (self.rotate_left << (n - 1))
+    return self if n <= 0 else self.rotate_left << (n - 1)
   
   def __rshift__(self, n: int):
-    return self if n <= 0 else (self.rotate_right >> (n - 1))
+    return self if n <= 0 else self.rotate_right >> (n - 1)
   
   @staticmethod
   @cache
   def DIRECTIONS():
-    return (Hex(1, 0, -1), Hex(1, -1, 0), Hex(0, -1, 1), Hex(-1, 0, 1), Hex(-1, 1, 0), Hex(0, 1, -1))
+    return Hex(1, 0, -1), Hex(1, -1, 0), Hex(0, -1, 1), Hex(-1, 0, 1), Hex(-1, 1, 0), Hex(0, 1, -1)
   
   @staticmethod
   @cache
   def DIAGONALS():
-    return (Hex(2, -1, -1), Hex(1, -2, 1), Hex(-1, -1, 2), Hex(-2, 1, 1), Hex(-1, 2, -1), Hex(1, 1, -2))
+    return Hex(2, -1, -1), Hex(1, -2, 1), Hex(-1, -1, 2), Hex(-2, 1, 1), Hex(-1, 2, -1), Hex(1, 1, -2)
   
   @staticmethod
   @cache
@@ -118,7 +118,7 @@ class Hex(NamedTuple):
   @property
   def neighbours(self):
     d = Hex.DIRECTIONS()
-    return (self + d[0], self + d[1], self + d[2], self + d[3], self + d[4], self + d[5])
+    return self + d[0], self + d[1], self + d[2], self + d[3], self + d[4], self + d[5]
   
   def diagonal_neighbour(self, diagonal: int):
     return self + Hex.DIAGONALS()[diagonal]
@@ -126,7 +126,7 @@ class Hex(NamedTuple):
   @property
   def diagonal_neighbours(self):
     d = Hex.DIAGONALS()
-    return (self + d[0], self + d[1], self + d[2], self + d[3], self + d[4], self + d[5])
+    return self + d[0], self + d[1], self + d[2], self + d[3], self + d[4], self + d[5]
   
   def __abs__(self):
     return (abs(self.q) + abs(self.r) + abs(self.s)) // 2
@@ -173,8 +173,8 @@ class Hex(NamedTuple):
   
   def reachable(self, movement: int):
     """Given a number of steps that can be made, which hexes are reachable?"""
-    visited: set[Hex] = {self} # set of hexes
-    fringes: list[list[Hex]] = [] # array of arrays of hexes
+    visited: set[Hex] = {self}
+    fringes: list[list[Hex]] = []
     fringes.append([self])
     
     for k in range(2, movement + 1):
@@ -189,8 +189,9 @@ class Hex(NamedTuple):
     return visited
   
   def ring(self, radius: int):
+    """Given a number of steps outwards, which hexes form a ring at this distance?"""
     results: list[Hex] = []
-    # this code doesn't work for radius == 0; can you see why?
+    if radius == 0: return [self]
     hex: Hex = self + self.direction(4) * radius
     for i in range(6):
       for _ in range(radius):
@@ -199,10 +200,11 @@ class Hex(NamedTuple):
     return results
   
   def spiral(self, radius: int):
-    results: list[Hex] = [self]
+    """Given a number of steps outwards, cover the area in that ring in a single spiral"""
+    results: list[Hex] = []
     for k in range(radius + 1):
       results += self.ring(k)
-    return results
+    return results # TODO: speedup? flatten instead of concats
   
   def qoffset_from_cube(self, offset: int):
     if offset != Offset.EVEN and offset != Offset.ODD:
