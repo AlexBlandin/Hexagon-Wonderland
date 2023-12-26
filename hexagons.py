@@ -1,7 +1,7 @@
-from functools import cache
-from typing import NamedTuple, Union
-from math import sqrt, sin, cos, pi
 import sys
+from functools import cache
+from math import cos, pi, sin, sqrt
+from typing import NamedTuple
 
 # Why this needed to wait until 3.11 for being part of typing, I'll never know
 if sys.version_info[0] == 3 and sys.version_info[1] < 11:
@@ -47,35 +47,35 @@ class Offset(ColRow):
 
   @classmethod
   @property
-  def EVEN(cls):
+  def even(cls):
     return 1
 
   @classmethod
   @property
-  def ODD(cls):
+  def odd(cls):
     return -1
 
   def qoffset_to_cube(self, offset: int):
-    if offset != Offset.EVEN and offset != Offset.ODD:
-      raise ValueError("offset must be EVEN (+1) or ODD (-1)")
+    if offset not in {Offset.even, Offset.odd}:
+      raise ValueError("offset must be EVEN (+1) or ODD (-1)")  # noqa: TRY003
     q = self.col
     r = self.row - (self.col + offset * (self.col & 1)) // 2
     return Hex(q, r, -q - r)
 
   def roffset_to_cube(self, offset: int):
-    if offset != Offset.EVEN and offset != Offset.ODD:
-      raise ValueError("offset must be EVEN (+1) or ODD (-1)")
+    if offset not in {Offset.even, Offset.odd}:
+      raise ValueError("offset must be EVEN (+1) or ODD (-1)")  # noqa: TRY003
     q = self.col - (self.row + offset * (self.row & 1)) // 2
     r = self.row
     return Hex(q, r, -q - r)
 
 
-class Hex(NamedTuple):
+class Hex(NamedTuple):  # noqa: PLR0904
   """A Hexagon, defined as a cube analogue in the space (q,r,s) where q + r + s == 0"""
 
-  q: Union[int, float]
-  r: Union[int, float]
-  s: Union[int, float]
+  q: int | float
+  r: int | float
+  s: int | float
   blocked: bool = False
 
   def __post_init__(self):
@@ -109,33 +109,33 @@ class Hex(NamedTuple):
 
   @staticmethod
   @cache
-  def DIRECTIONS():
+  def directions():
     return Hex(1, 0, -1), Hex(1, -1, 0), Hex(0, -1, 1), Hex(-1, 0, 1), Hex(-1, 1, 0), Hex(0, 1, -1)
 
   @staticmethod
   @cache
-  def DIAGONALS():
+  def diagonals():
     return Hex(2, -1, -1), Hex(1, -2, 1), Hex(-1, -1, 2), Hex(-2, 1, 1), Hex(-1, 2, -1), Hex(1, 1, -2)
 
   @staticmethod
   @cache
   def direction(direction: int):
-    return Hex.DIRECTIONS()[direction]
+    return Hex.directions()[direction]
 
   def neighbour(self, direction: int):
-    return self + Hex.DIRECTIONS()[direction]
+    return self + Hex.directions()[direction]
 
   @property
   def neighbours(self):
-    d = Hex.DIRECTIONS()
+    d = Hex.directions()
     return self + d[0], self + d[1], self + d[2], self + d[3], self + d[4], self + d[5]
 
   def diagonal_neighbour(self, diagonal: int):
-    return self + Hex.DIAGONALS()[diagonal]
+    return self + Hex.diagonals()[diagonal]
 
   @property
   def diagonal_neighbours(self):
-    d = Hex.DIAGONALS()
+    d = Hex.diagonals()
     return self + d[0], self + d[1], self + d[2], self + d[3], self + d[4], self + d[5]
 
   def __abs__(self):
@@ -166,15 +166,15 @@ class Hex(NamedTuple):
     return [round(a_nudge.lerp(b_nudge, step * i)) for i in range(N + 1)]  # type: ignore
 
   @property
-  def reflectQ(self):
+  def reflect_q(self):
     return Hex(self.q, self.s, self.r)
 
   @property
-  def reflectR(self):
+  def reflect_r(self):
     return Hex(self.s, self.r, self.q)
 
   @property
-  def reflectS(self):
+  def reflect_s(self):
     return Hex(self.r, self.q, self.s)
 
   def range(self, N: int):
@@ -218,14 +218,14 @@ class Hex(NamedTuple):
     return results  # TODO: speedup? flatten instead of concats
 
   def qoffset_from_cube(self, offset: int):
-    if offset != Offset.EVEN and offset != Offset.ODD:
-      raise ValueError("offset must be EVEN (+1) or ODD (-1)")
+    if offset not in {Offset.even, Offset.odd}:
+      raise ValueError("offset must be EVEN (+1) or ODD (-1)")  # noqa: TRY003
     hex: Hex = round(self)  # type: ignore
     return Offset(int(hex.q), int(hex.r) + (int(hex.q) + offset * (int(hex.q) & 1)) // 2)
 
   def roffset_from_cube(self, offset: int):
-    if offset != Offset.EVEN and offset != Offset.ODD:
-      raise ValueError("offset must be EVEN (+1) or ODD (-1)")
+    if offset not in {Offset.even, Offset.odd}:
+      raise ValueError("offset must be EVEN (+1) or ODD (-1)")  # noqa: TRY003
     hex: Hex = round(self)  # type: ignore
     return Offset(int(hex.q) + (int(hex.r) + offset * (int(hex.r) & 1)) // 2, int(hex.r))
 
@@ -263,12 +263,12 @@ class Layout(NamedTuple):
 
   @classmethod
   @property
-  def POINTY(cls):
+  def pointy(cls):
     return Orientation(sqrt(3.0), sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5)
 
   @classmethod
   @property
-  def FLAT(cls):
+  def flat(cls):
     return Orientation(3.0 / 2.0, 0.0, sqrt(3.0) / 2.0, sqrt(3.0), 2.0 / 3.0, 0.0, -1.0 / 3.0, sqrt(3.0) / 3.0, 0.0)
 
   def hex_to_pixel(self, h: Hex):
@@ -385,33 +385,33 @@ def test_hex_linedraw():
 
 def test_layout():
   h = Hex(3, 4, -7)
-  flat = Layout(Layout.FLAT, Point(10.0, 15.0), Point(35.0, 71.0))
+  flat = Layout(Layout.flat, Point(10.0, 15.0), Point(35.0, 71.0))
   equal_hex("layout flat", h, round(flat.pixel_to_hex(flat.hex_to_pixel(h))))  # type: ignore
-  pointy = Layout(Layout.POINTY, Point(10.0, 15.0), Point(35.0, 71.0))
+  pointy = Layout(Layout.pointy, Point(10.0, 15.0), Point(35.0, 71.0))
   equal_hex("layout pointy", h, round(pointy.pixel_to_hex(pointy.hex_to_pixel(h))))  # type: ignore
 
 
 def test_offset_roundtrip():
   a = Hex(3, 4, -7)
   b = Offset(1, -3)
-  equal_hex("roundtrip even-q-from", a, a.qoffset_from_cube(Offset.EVEN).qoffset_to_cube(Offset.EVEN))
-  equal_rowcol("roundtrip even-q-to", b, b.qoffset_to_cube(Offset.EVEN).qoffset_from_cube(Offset.EVEN))
-  equal_hex("roundtrip odd-q-from-to", a, a.qoffset_from_cube(Offset.ODD).qoffset_to_cube(Offset.ODD))
-  equal_rowcol("roundtrip odd-q-to", b, b.qoffset_to_cube(Offset.ODD).qoffset_from_cube(Offset.ODD))
-  equal_hex("roundtrip even-r-from", a, a.roffset_from_cube(Offset.EVEN).roffset_to_cube(Offset.EVEN))
-  equal_rowcol("roundtrip even-r-to", b, b.roffset_to_cube(Offset.EVEN).roffset_from_cube(Offset.EVEN))
-  equal_hex("roundtrip odd-r-from", a, a.roffset_from_cube(Offset.ODD).roffset_to_cube(Offset.ODD))
-  equal_rowcol("roundtrip odd-r-to", b, b.roffset_to_cube(Offset.ODD).roffset_from_cube(Offset.ODD))
+  equal_hex("roundtrip even-q-from", a, a.qoffset_from_cube(Offset.even).qoffset_to_cube(Offset.even))
+  equal_rowcol("roundtrip even-q-to", b, b.qoffset_to_cube(Offset.even).qoffset_from_cube(Offset.even))
+  equal_hex("roundtrip odd-q-from-to", a, a.qoffset_from_cube(Offset.odd).qoffset_to_cube(Offset.odd))
+  equal_rowcol("roundtrip odd-q-to", b, b.qoffset_to_cube(Offset.odd).qoffset_from_cube(Offset.odd))
+  equal_hex("roundtrip even-r-from", a, a.roffset_from_cube(Offset.even).roffset_to_cube(Offset.even))
+  equal_rowcol("roundtrip even-r-to", b, b.roffset_to_cube(Offset.even).roffset_from_cube(Offset.even))
+  equal_hex("roundtrip odd-r-from", a, a.roffset_from_cube(Offset.odd).roffset_to_cube(Offset.odd))
+  equal_rowcol("roundtrip odd-r-to", b, b.roffset_to_cube(Offset.odd).roffset_from_cube(Offset.odd))
 
 
 def test_offset_from_cube():
-  equal_rowcol("offset_from_cube even-q", Offset(1, 3), Hex(1, 2, -3).qoffset_from_cube(Offset.EVEN))
-  equal_rowcol("offset_from_cube odd-q", Offset(1, 2), Hex(1, 2, -3).qoffset_from_cube(Offset.ODD))
+  equal_rowcol("offset_from_cube even-q", Offset(1, 3), Hex(1, 2, -3).qoffset_from_cube(Offset.even))
+  equal_rowcol("offset_from_cube odd-q", Offset(1, 2), Hex(1, 2, -3).qoffset_from_cube(Offset.odd))
 
 
 def test_offset_to_cube():
-  equal_hex("offset_to_cube even-q", Hex(1, 2, -3), Offset(1, 3).qoffset_to_cube(Offset.EVEN))
-  equal_hex("offset_to_cube odd-q", Hex(1, 2, -3), Offset(1, 2).qoffset_to_cube(Offset.ODD))
+  equal_hex("offset_to_cube even-q", Hex(1, 2, -3), Offset(1, 3).qoffset_to_cube(Offset.even))
+  equal_hex("offset_to_cube odd-q", Hex(1, 2, -3), Offset(1, 2).qoffset_to_cube(Offset.odd))
 
 
 def test_doubled_roundtrip():
