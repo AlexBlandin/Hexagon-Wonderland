@@ -1,13 +1,6 @@
-import sys
 from functools import cache
 from math import cos, pi, sin, sqrt
-from typing import NamedTuple
-
-# Why this needed to wait until 3.11 for being part of typing, I'll never know
-if sys.version_info[0] == 3 and sys.version_info[1] < 11:
-  from typing_extensions import Self
-else:
-  from typing import Self
+from typing import NamedTuple, Self
 
 
 class Point(NamedTuple):
