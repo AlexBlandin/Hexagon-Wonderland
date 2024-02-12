@@ -4,21 +4,21 @@ from typing import NamedTuple, Self
 
 
 class Point(NamedTuple):
-  """A point in a Cartesian (x,y) space"""
+  """A point in a Cartesian (x,y) space."""
 
   x: float
   y: float
 
 
 class ColRow(NamedTuple):
-  """A point in a (col,row) space"""
+  """A point in a (col,row) space."""
 
   col: int
   row: int
 
 
 class DoubledCoord(ColRow):
-  """Coordinates in a Doubled (col,row) grid space"""
+  """Coordinates in a Doubled (col,row) grid space."""
 
   @property
   def qdoubled_to_cube(self):
@@ -36,7 +36,7 @@ class DoubledCoord(ColRow):
 
 
 class Offset(ColRow):
-  """Coordinates in Offset (col,row) space, the type of offset system is baked in for uniformity"""
+  """Coordinates in Offset (col,row) space, the type of offset system is baked in for uniformity."""
 
   @classmethod
   @property
@@ -50,21 +50,23 @@ class Offset(ColRow):
 
   def qoffset_to_cube(self, offset: int):
     if offset not in {Offset.even, Offset.odd}:
-      raise ValueError("offset must be EVEN (+1) or ODD (-1)")  # noqa: TRY003
+      msg = "offset must be EVEN (+1) or ODD (-1)"
+      raise ValueError(msg)
     q = self.col
     r = self.row - (self.col + offset * (self.col & 1)) // 2
     return Hex(q, r, -q - r)
 
   def roffset_to_cube(self, offset: int):
     if offset not in {Offset.even, Offset.odd}:
-      raise ValueError("offset must be EVEN (+1) or ODD (-1)")  # noqa: TRY003
+      msg = "offset must be EVEN (+1) or ODD (-1)"
+      raise ValueError(msg)
     q = self.col - (self.row + offset * (self.row & 1)) // 2
     r = self.row
     return Hex(q, r, -q - r)
 
 
 class Hex(NamedTuple):  # noqa: PLR0904
-  """A Hexagon, defined as a cube analogue in the space (q,r,s) where q + r + s == 0"""
+  """A Hexagon, defined as a cube analogue in the space (q,r,s) where q + r + s == 0."""
 
   q: int | float
   r: int | float
@@ -204,7 +206,7 @@ class Hex(NamedTuple):  # noqa: PLR0904
     return results
 
   def spiral(self, radius: int):
-    """Given a number of steps outwards, cover the area in that ring in a single spiral"""
+    """Given a number of steps outwards, cover the area in that ring in a single spiral."""
     results: list[Hex] = []
     for k in range(radius + 1):
       results += self.ring(k)
@@ -212,13 +214,15 @@ class Hex(NamedTuple):  # noqa: PLR0904
 
   def qoffset_from_cube(self, offset: int):
     if offset not in {Offset.even, Offset.odd}:
-      raise ValueError("offset must be EVEN (+1) or ODD (-1)")  # noqa: TRY003
+      msg = "offset must be EVEN (+1) or ODD (-1)"
+      raise ValueError(msg)
     hex: Hex = round(self)  # type: ignore
     return Offset(int(hex.q), int(hex.r) + (int(hex.q) + offset * (int(hex.q) & 1)) // 2)
 
   def roffset_from_cube(self, offset: int):
     if offset not in {Offset.even, Offset.odd}:
-      raise ValueError("offset must be EVEN (+1) or ODD (-1)")  # noqa: TRY003
+      msg = "offset must be EVEN (+1) or ODD (-1)"
+      raise ValueError(msg)
     hex: Hex = round(self)  # type: ignore
     return Offset(int(hex.q) + (int(hex.r) + offset * (int(hex.r) & 1)) // 2, int(hex.r))
 
@@ -234,7 +238,7 @@ class Hex(NamedTuple):  # noqa: PLR0904
 
 
 class Orientation(NamedTuple):
-  """A helper POD for Layout"""
+  """A helper POD for Layout."""
 
   f0: float
   f1: float
@@ -313,7 +317,7 @@ def equal_any(name: str, a, b):
 
 def equal_hex_array(name: str, a: list[Hex], b: list[Hex]):
   equal_any(name, len(a), len(b))
-  for i in range(0, len(a)):
+  for i in range(len(a)):
     equal_hex(name, a[i], b[i])
 
 
@@ -372,7 +376,9 @@ def test_hex_round():
 
 def test_hex_linedraw():
   equal_hex_array(
-    "hex_linedraw", [Hex(0, 0, 0), Hex(0, -1, 1), Hex(0, -2, 2), Hex(1, -3, 2), Hex(1, -4, 3), Hex(1, -5, 4)], Hex(0, 0, 0).linedraw(Hex(1, -5, 4))
+    "hex_linedraw",
+    [Hex(0, 0, 0), Hex(0, -1, 1), Hex(0, -2, 2), Hex(1, -3, 2), Hex(1, -4, 3), Hex(1, -5, 4)],
+    Hex(0, 0, 0).linedraw(Hex(1, -5, 4)),
   )
 
 
