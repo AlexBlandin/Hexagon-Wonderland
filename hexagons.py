@@ -210,7 +210,7 @@ class Hex(NamedTuple):  # noqa: PLR0904
     results: list[Hex] = []
     for k in range(radius + 1):
       results += self.ring(k)
-    return results  # TODO: speedup? flatten instead of concats
+    return results  # TODO(alex): speedup? flatten instead of concats
 
   def qoffset_from_cube(self, offset: int):
     if offset not in {Offset.even, Offset.odd}:
