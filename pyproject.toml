@@ -3,6 +3,7 @@ name = "Hexagon Wonderland"
 version = "1.0.0"
 description = "Hexagons everywhere but not a quad to drink"
 authors = ["AlexBlandin"]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
