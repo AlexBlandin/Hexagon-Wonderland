@@ -6,7 +6,6 @@ Based on http://www.redblobgames.com/grids/hexagons/ (Generated code -- CC0 -- N
 Copyright 2022 Alex Blandin
 """
 
-
 from functools import cache
 from math import cos, pi, sin, sqrt
 from typing import NamedTuple, Self
@@ -179,7 +178,7 @@ class Hex(NamedTuple):
   def reflect_s(self):  # noqa: ANN101, ANN201, D102
     return Hex(self.r, self.q, self.s)
 
-  def range(self, N: int):  # noqa: ANN101, ANN201, A003, N803
+  def range(self, N: int):  # noqa: ANN101, ANN201, N803
     """Given a range N, which hexes are within N steps from here?"""
     return [self + Hex(q, r, -q - r) for q in range(-N, N + 1) for r in range(max(-N, -q - N), min(+N, -q + N) + 1)]
 
