@@ -9,11 +9,7 @@ authors = [{ name = "AlexBlandin" }]
 dependencies = ["typing_extensions>=4.4.0; python_version <='3.11'"]
 
 [project.optional-dependencies]
-toml = ["pytomlpp"]
-cli = ["colorama; platform_system == 'Windows'"]
-all = ["toml", "cli"]
-lint = ["ruff"]
-dev = ["all", "lint"]
+dev = ["ruff"]
 
 [project.urls]
 Documentation = "https://github.com/alexblandin/Hexagon-Wonderland#readme"
