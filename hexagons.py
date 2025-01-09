@@ -29,14 +29,14 @@ class DoubledCoord(ColRow):
   """Coordinates in a Doubled (col,row) grid space."""
 
   @property
-  def qdoubled_to_cube(self):  # noqa: ANN101, ANN201, D102
+  def qdoubled_to_cube(self):  # noqa: ANN201, D102
     q = self.col
     r = (self.row - self.col) // 2
     s = -q - r
     return Hex(q, r, s)
 
   @property
-  def rdoubled_to_cube(self):  # noqa: ANN101, ANN201, D102
+  def rdoubled_to_cube(self):  # noqa: ANN201, D102
     q = (self.col - self.row) // 2
     r = self.row
     s = -q - r
@@ -47,14 +47,14 @@ class Offset(ColRow):
   """Coordinates in Offset (col,row) space, the type of offset system is baked in for uniformity."""
 
   @classmethod
-  def even_offset(cls) -> int:  # noqa: ANN102, D102
+  def even_offset(cls) -> int:  # noqa: D102
     return 1
 
   @classmethod
-  def odd_offset(cls) -> int:  # noqa: ANN102, D102
+  def odd_offset(cls) -> int:  # noqa: D102
     return -1
 
-  def qoffset_to_cube(self, offset: int):  # noqa: ANN101, ANN201, D102
+  def qoffset_to_cube(self, offset: int):  # noqa: ANN201, D102
     if offset not in {Offset.even_offset(), Offset.odd_offset()}:
       msg = "offset must be EVEN (+1) or ODD (-1)"
       raise ValueError(msg)
@@ -62,7 +62,7 @@ class Offset(ColRow):
     r = self.row - (self.col + offset * (self.col & 1)) // 2
     return Hex(q, r, -q - r)
 
-  def roffset_to_cube(self, offset: int):  # noqa: ANN101, ANN201, D102
+  def roffset_to_cube(self, offset: int):  # noqa: ANN201, D102
     if offset not in {Offset.even_offset(), Offset.odd_offset()}:
       msg = "offset must be EVEN (+1) or ODD (-1)"
       raise ValueError(msg)
@@ -79,33 +79,33 @@ class Hex(NamedTuple):
   s: int | float
   blocked: bool = False
 
-  def __post_init__(self):  # noqa: ANN101, ANN204, D105
+  def __post_init__(self):  # noqa: ANN204, D105
     assert round(self.q + self.r + self.s) == 0, "q + r + s must equal 0"  # noqa: S101
 
-  def __add__(self, other: Self):  # noqa: ANN101, ANN204, D105
+  def __add__(self, other: Self):  # noqa: ANN204, D105
     return Hex(self.q + other.q, self.r + other.r, self.s + other.s)
 
-  def __sub__(self, other: Self):  # noqa: ANN101, ANN204, D105
+  def __sub__(self, other: Self):  # noqa: ANN204, D105
     return Hex(self.q - other.q, self.r - other.r, self.s - other.s)
 
-  def __mul__(self, scale: float):  # noqa: ANN101, ANN204, D105
+  def __mul__(self, scale: float):  # noqa: ANN204, D105
     return Hex(self.q * scale, self.r * scale, self.s * scale)
 
-  def __truediv__(self, scale: float):  # noqa: ANN101, ANN204, D105
+  def __truediv__(self, scale: float):  # noqa: ANN204, D105
     return Hex(self.q / scale, self.r / scale, self.s / scale)
 
   @property
-  def rotate_left(self):  # noqa: ANN101, ANN201, D102
+  def rotate_left(self):  # noqa: ANN201, D102
     return Hex(-self.s, -self.q, -self.r)
 
   @property
-  def rotate_right(self):  # noqa: ANN101, ANN201, D102
+  def rotate_right(self):  # noqa: ANN201, D102
     return Hex(-self.r, -self.s, -self.q)
 
-  def __lshift__(self, n: int):  # noqa: ANN101, ANN204, D105
+  def __lshift__(self, n: int):  # noqa: ANN204, D105
     return self if n <= 0 else self.rotate_left << (n - 1)
 
-  def __rshift__(self, n: int):  # noqa: ANN101, ANN204, D105
+  def __rshift__(self, n: int):  # noqa: ANN204, D105
     return self if n <= 0 else self.rotate_right >> (n - 1)
 
   @staticmethod
@@ -123,29 +123,29 @@ class Hex(NamedTuple):
   def direction(direction: int):  # noqa: ANN205, D102
     return Hex.directions()[direction]
 
-  def neighbour(self, direction: int):  # noqa: ANN101, ANN201, D102
+  def neighbour(self, direction: int):  # noqa: ANN201, D102
     return self + Hex.directions()[direction]
 
   @property
-  def neighbours(self):  # noqa: ANN101, ANN201, D102
+  def neighbours(self):  # noqa: ANN201, D102
     d = Hex.directions()
     return self + d[0], self + d[1], self + d[2], self + d[3], self + d[4], self + d[5]
 
-  def diagonal_neighbour(self, diagonal: int):  # noqa: ANN101, ANN201, D102
+  def diagonal_neighbour(self, diagonal: int):  # noqa: ANN201, D102
     return self + Hex.diagonals()[diagonal]
 
   @property
-  def diagonal_neighbours(self):  # noqa: ANN101, ANN201, D102
+  def diagonal_neighbours(self):  # noqa: ANN201, D102
     d = Hex.diagonals()
     return self + d[0], self + d[1], self + d[2], self + d[3], self + d[4], self + d[5]
 
-  def __abs__(self):  # noqa: ANN101, ANN204, D105
+  def __abs__(self):  # noqa: ANN204, D105
     return (abs(self.q) + abs(self.r) + abs(self.s)) // 2
 
-  def distance(self, other: Self):  # noqa: ANN101, ANN201, D102
+  def distance(self, other: Self):  # noqa: ANN201, D102
     return abs(self - other)
 
-  def __round__(self):  # noqa: ANN101, ANN204, D105
+  def __round__(self):  # noqa: ANN204, D105
     qi, ri, si = int(round(self.q)), int(round(self.r)), int(round(self.s))
     q_diff, r_diff, s_diff = abs(qi - self.q), abs(ri - self.r), abs(si - self.s)
     if q_diff > r_diff and q_diff > s_diff:
@@ -156,33 +156,33 @@ class Hex(NamedTuple):
       si = -qi - ri
     return Hex(qi, ri, si)
 
-  def lerp(self, other: Self, t: float):  # noqa: ANN101, ANN201, D102
+  def lerp(self, other: Self, t: float):  # noqa: ANN201, D102
     return Hex(self.q * (1.0 - t) + other.q * t, self.r * (1.0 - t) + other.r * t, self.s * (1.0 - t) + other.s * t)
 
-  def linedraw(self, other: Self) -> list[Self]:  # noqa: ANN101, D102
+  def linedraw(self, other: Self) -> list[Self]:  # noqa: D102
     N = round(self.distance(other))  # noqa: N806
     a_nudge = Hex(self.q + 1e-06, self.r + 1e-06, self.s - 2e-06)
     b_nudge = Hex(other.q + 1e-06, other.r + 1e-06, other.s - 2e-06)
     step = 1.0 / max(N, 1)
-    return [round(a_nudge.lerp(b_nudge, step * i)) for i in range(N + 1)]  # type: ignore  # noqa: PGH003
+    return [round(a_nudge.lerp(b_nudge, step * i)) for i in range(N + 1)]
 
   @property
-  def reflect_q(self):  # noqa: ANN101, ANN201, D102
+  def reflect_q(self):  # noqa: ANN201, D102
     return Hex(self.q, self.s, self.r)
 
   @property
-  def reflect_r(self):  # noqa: ANN101, ANN201, D102
+  def reflect_r(self):  # noqa: ANN201, D102
     return Hex(self.s, self.r, self.q)
 
   @property
-  def reflect_s(self):  # noqa: ANN101, ANN201, D102
+  def reflect_s(self):  # noqa: ANN201, D102
     return Hex(self.r, self.q, self.s)
 
-  def range(self, N: int):  # noqa: ANN101, ANN201, N803
+  def range(self, N: int):  # noqa: ANN201, N803
     """Given a range N, which hexes are within N steps from here?"""
     return [self + Hex(q, r, -q - r) for q in range(-N, N + 1) for r in range(max(-N, -q - N), min(+N, -q + N) + 1)]
 
-  def reachable(self, movement: int):  # noqa: ANN101, ANN201
+  def reachable(self, movement: int):  # noqa: ANN201
     """Given a number of steps that can be made, which hexes are reachable?"""
     visited: set[Hex] = {self}
     fringes: list[list[Hex]] = []
@@ -199,7 +199,7 @@ class Hex(NamedTuple):
 
     return visited
 
-  def ring(self, radius: int):  # noqa: ANN101, ANN201
+  def ring(self, radius: int):  # noqa: ANN201
     """Given a number of steps outwards, which hexes form a ring at this distance?"""
     results: list[Hex] = []
     if radius == 0:
@@ -211,35 +211,35 @@ class Hex(NamedTuple):
         hex = hex.neighbour(i)  # noqa: A001
     return results
 
-  def spiral(self, radius: int):  # noqa: ANN101, ANN201
+  def spiral(self, radius: int):  # noqa: ANN201
     """Given a number of steps outwards, cover the area in that ring in a single spiral."""
     results: list[Hex] = []
     for k in range(radius + 1):
       results += self.ring(k)
     return results  # TODO(alex): speedup? flatten instead of concats
 
-  def qoffset_from_cube(self, offset: int):  # noqa: ANN101, ANN201, D102
+  def qoffset_from_cube(self, offset: int):  # noqa: ANN201, D102
     if offset not in {Offset.even_offset(), Offset.odd_offset()}:
       msg = "offset must be EVEN (+1) or ODD (-1)"
       raise ValueError(msg)
-    hex: Hex = round(self)  # type: ignore  # noqa: A001, PGH003
+    hex: Hex = round(self)  # noqa: A001
     return Offset(int(hex.q), int(hex.r) + (int(hex.q) + offset * (int(hex.q) & 1)) // 2)
 
-  def roffset_from_cube(self, offset: int):  # noqa: ANN101, ANN201, D102
+  def roffset_from_cube(self, offset: int):  # noqa: ANN201, D102
     if offset not in {Offset.even_offset(), Offset.odd_offset()}:
       msg = "offset must be EVEN (+1) or ODD (-1)"
       raise ValueError(msg)
-    hex: Hex = round(self)  # type: ignore  # noqa: A001, PGH003
+    hex: Hex = round(self)  # noqa: A001
     return Offset(int(hex.q) + (int(hex.r) + offset * (int(hex.r) & 1)) // 2, int(hex.r))
 
   @property
-  def qdoubled_from_cube(self):  # noqa: ANN101, ANN201, D102
-    hex: Hex = round(self)  # type: ignore  # noqa: A001, PGH003
+  def qdoubled_from_cube(self):  # noqa: ANN201, D102
+    hex: Hex = round(self)  # noqa: A001
     return DoubledCoord(int(hex.q), 2 * int(hex.r) + int(hex.q))
 
   @property
-  def rdoubled_from_cube(self):  # noqa: ANN101, ANN201, D102
-    hex: Hex = round(self)  # type: ignore  # noqa: A001, PGH003
+  def rdoubled_from_cube(self):  # noqa: ANN201, D102
+    hex: Hex = round(self)  # noqa: A001
     return DoubledCoord(2 * int(hex.q) + int(hex.r), int(hex.r))
 
 
@@ -265,32 +265,32 @@ class Layout(NamedTuple):
   origin: Point
 
   @classmethod
-  def pointy_layout(cls):  # noqa: ANN102, ANN206, D102
+  def pointy_layout(cls):  # noqa: ANN206, D102
     return Orientation(sqrt(3.0), sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5)
 
   @classmethod
-  def flat_layout(cls):  # noqa: ANN102, ANN206, D102
+  def flat_layout(cls):  # noqa: ANN206, D102
     return Orientation(3.0 / 2.0, 0.0, sqrt(3.0) / 2.0, sqrt(3.0), 2.0 / 3.0, 0.0, -1.0 / 3.0, sqrt(3.0) / 3.0, 0.0)
 
-  def hex_to_pixel(self, h: Hex):  # noqa: ANN101, ANN201, D102
+  def hex_to_pixel(self, h: Hex):  # noqa: ANN201, D102
     o, size, origin = self.orientation, self.size, self.origin
     x = (o.f0 * h.q + o.f1 * h.r) * size.x + origin.x
     y = (o.f2 * h.q + o.f3 * h.r) * size.y + origin.y
     return Point(x, y)
 
-  def pixel_to_hex(self, p: Point):  # noqa: ANN101, ANN201, D102
+  def pixel_to_hex(self, p: Point):  # noqa: ANN201, D102
     o, size, origin = self.orientation, self.size, self.origin
     pt = Point((p.x - origin.x) / size.x, (p.y - origin.y) / size.y)
     q = o.b0 * pt.x + o.b1 * pt.y
     r = o.b2 * pt.x + o.b3 * pt.y
     return Hex(q, r, -q - r)
 
-  def hex_corner_offset(self, corner: int):  # noqa: ANN101, ANN201, D102
+  def hex_corner_offset(self, corner: int):  # noqa: ANN201, D102
     o, size = self.orientation, self.size
     angle = (o.start_angle - corner) * pi * 0.3333333333333333
     return Point(size.x * cos(angle), size.y * sin(angle))
 
-  def polygon_corners(self, h: Hex):  # noqa: ANN101, ANN201, D102
+  def polygon_corners(self, h: Hex):  # noqa: ANN201, D102
     corners: list[Point] = []
     center = self.hex_to_pixel(h)
     for i in range(6):
@@ -301,7 +301,7 @@ class Layout(NamedTuple):
 
 # Tests
 def complain(*args) -> None:  # noqa: ANN002, D103
-  print(*args)
+  print(*args)  # noqa: T201
 
 
 def equal_hex(name: str, a: Hex, b: Hex) -> None:  # noqa: D103
@@ -363,18 +363,18 @@ def test_hex_round() -> None:  # noqa: D103
   a = Hex(0.0, 0.0, 0.0)
   b = Hex(1.0, -1.0, 0.0)
   c = Hex(0.0, -1.0, 1.0)
-  equal_hex("hex_round 1", Hex(5, -10, 5), round(Hex(0.0, 0.0, 0.0).lerp(Hex(10.0, -20.0, 10.0), 0.5)))  # type: ignore  # noqa: PGH003
-  equal_hex("hex_round 2", round(a), round(a.lerp(b, 0.499)))  # type: ignore  # noqa: PGH003
-  equal_hex("hex_round 3", round(b), round(a.lerp(b, 0.501)))  # type: ignore  # noqa: PGH003
+  equal_hex("hex_round 1", Hex(5, -10, 5), round(Hex(0.0, 0.0, 0.0).lerp(Hex(10.0, -20.0, 10.0), 0.5)))
+  equal_hex("hex_round 2", round(a), round(a.lerp(b, 0.499)))
+  equal_hex("hex_round 3", round(b), round(a.lerp(b, 0.501)))
   equal_hex(
     "hex_round 4",
-    round(a),  # type: ignore  # noqa: PGH003
-    round(Hex(a.q * 0.4 + b.q * 0.3 + c.q * 0.3, a.r * 0.4 + b.r * 0.3 + c.r * 0.3, a.s * 0.4 + b.s * 0.3 + c.s * 0.3)),  # type: ignore  # noqa: PGH003
+    round(a),
+    round(Hex(a.q * 0.4 + b.q * 0.3 + c.q * 0.3, a.r * 0.4 + b.r * 0.3 + c.r * 0.3, a.s * 0.4 + b.s * 0.3 + c.s * 0.3)),
   )
   equal_hex(
     "hex_round 5",
-    round(c),  # type: ignore  # noqa: PGH003
-    round(Hex(a.q * 0.3 + b.q * 0.3 + c.q * 0.4, a.r * 0.3 + b.r * 0.3 + c.r * 0.4, a.s * 0.3 + b.s * 0.3 + c.s * 0.4)),  # type: ignore  # noqa: PGH003
+    round(c),
+    round(Hex(a.q * 0.3 + b.q * 0.3 + c.q * 0.4, a.r * 0.3 + b.r * 0.3 + c.r * 0.4, a.s * 0.3 + b.s * 0.3 + c.s * 0.4)),
   )
 
 
@@ -389,9 +389,9 @@ def test_hex_linedraw() -> None:  # noqa: D103
 def test_layout() -> None:  # noqa: D103
   h = Hex(3, 4, -7)
   flat = Layout(Layout.flat_layout(), Point(10.0, 15.0), Point(35.0, 71.0))
-  equal_hex("layout flat", h, round(flat.pixel_to_hex(flat.hex_to_pixel(h))))  # type: ignore  # noqa: PGH003
+  equal_hex("layout flat", h, round(flat.pixel_to_hex(flat.hex_to_pixel(h))))
   pointy = Layout(Layout.pointy_layout(), Point(10.0, 15.0), Point(35.0, 71.0))
-  equal_hex("layout pointy", h, round(pointy.pixel_to_hex(pointy.hex_to_pixel(h))))  # type: ignore  # noqa: PGH003
+  equal_hex("layout pointy", h, round(pointy.pixel_to_hex(pointy.hex_to_pixel(h))))
 
 
 def test_offset_roundtrip() -> None:  # noqa: D103
@@ -463,6 +463,6 @@ if __name__ == "__main__":
   from timeit import timeit
 
   test_all()
-  print("All tests complete.")
+  print("All tests complete.")  # noqa: T201
   testing_time = timeit("test_all()", number=10**4, globals=globals())
-  print(f"{testing_time:.2f}s")
+  print(f"{testing_time:.2f}s")  # noqa: T201

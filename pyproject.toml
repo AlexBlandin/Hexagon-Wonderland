@@ -9,7 +9,7 @@ authors = [{ name = "AlexBlandin" }]
 dependencies = ["typing_extensions>=4.4.0; python_version <='3.11'"]
 
 [project.optional-dependencies]
-dev = ["ruff"]
+dev = ["ruff", "pdbp", "basedmypy", "basedpyright"]
 
 [project.urls]
 Documentation = "https://github.com/alexblandin/Hexagon-Wonderland#readme"
@@ -27,7 +27,8 @@ ignore = [
   "ERA",    # code comments actually help
   "TD003",  # not using github to track todo/issues
   "S311",   # I know when to use secrets
-  "T20",    # print is good, actually 
+  # "T20",    # print is good, actually 
+  "D202",   # a little vertical separation can be nice
   "W191",   # ruff format
   "E111",   # ruff format
   "E114",   # ruff format
